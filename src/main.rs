@@ -10,7 +10,10 @@ fn main() {
     println!("Welcome to this simple Rust wget clone...");
 
     // First, parse the url the user wants to wget.
-    let url = parse_args();
+    let url = match parse_args() {
+    	Some(url) => url,
+    	None => { help(); panic!("Could not parse user input! Aborting!") }
+    };
 
     // Grab the domain name portion so we know WHERE to make the request.
     let domain_name = get_domain_name(&url);
@@ -19,8 +22,8 @@ fn main() {
     
     // Request the page at the specific domain address.
     let response = match request_page(&domain_name, &path) {
-    	Ok(s) => {println!("oh hai"); s},
-    	Err(e) => {println!("oh shit"); panic!("Error requesting page: {:?}", e)}
+    	Ok(s) => s,
+    	Err(e) => panic!("Error requesting page: {:?}", e)
     };
 
     // Display the response.
@@ -42,6 +45,7 @@ fn build_http_message(path: &str) -> String {
     format!("GET {} HTTP/1.0\n\n", path)
 }
 
+// TODO actually return Err() instead of just raising with expect
 fn request_page(domain_name: &str, path: &str) -> Result<String, &'static str> {
 	let http_message = build_http_message(path);
     println!("[DEBUG] The http message is:\n{}", &http_message);
@@ -68,25 +72,9 @@ fn request_page(domain_name: &str, path: &str) -> Result<String, &'static str> {
     Ok(response)
 }
 
-fn parse_args() -> String {
-	// Grab all the args from cmdline.
-	let args: Vec<String> = env::args().collect();
-
-	// TODO clean up this ugly mess! Return Option or Result and do error handling outside in main.
-	return match args.len() {
-		// If no args, panic!
-		1 => {help(); panic!();},
-		2 => {
-			// If one arg, check that it can be parsed as a string.
-			match args[1].parse() {
-				Ok(arg) => {arg},
-				// Otherwise, panic!
-				_ => {help(); panic!();},
-			}
-		},
-		// If more than one arg, panic!
-		_ => {help(); panic!();},
-	}
+fn parse_args() -> Option<String> {
+	// Grab the first arg (index 0 is the binary name).
+	env::args().nth(1)
 }
 
 fn help() {
