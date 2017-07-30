@@ -1,9 +1,9 @@
 #![feature(lookup_host)]
 use std::io::prelude::*;
 use std::env;
+use std::net;
 use std::net::TcpStream;
 
-use std::net;
 
 fn main() {
 
@@ -12,44 +12,67 @@ fn main() {
     // First, parse the url the user wants to wget.
     let url = parse_args();
 
-    // TODO Then, construct the HTTP message to send.
-//    let http_message: String = format!("GET {} HTTP/1.1\n\n", url);
-
-    let http_message = "GET / HTTP/1.1\n\n";
-    println!("[DEBUG] The http message is:\n{}", http_message);
-
+    // Grab the domain name portion so we know WHERE to make the request.
+    let domain_name = get_domain_name(&url);
+    // Grab the path portion of the url so we know WHAT to request.
+    let path = get_path_from_url(&url);
     
-    // DEBUG ONLY: print out all IPs for every result we get from the DNS query.
-    for host in net::lookup_host(&url) {
-    	host.map(|sock_addr: std::net::SocketAddr| println!("ip: {}", sock_addr.ip())).count();
-    	// Same as doing this:
-    	// for sock_addr in host {
-    	// 	println!("ip: {}", sock_addr.ip());
-    	// }
-    }
-
-    // Then, open a socket/whatever to the URL.
-    	// TODO First, we need to do a DNS lookup on the given url to get the IP address.
-    	// Then we can open a TCP socket to that IP address.
-	let address = "localhost:1234";
-    let mut stream = TcpStream::connect(address).unwrap();
-
-    // Write out the entire HTTP message byte-by-byte.
-    let _ = stream.write_all(&http_message.as_bytes());
-
-    // Read back the response from the stream.
-    let mut response = String::new();
-    let _ = stream.read_to_string(&mut response);
+    // Request the page at the specific domain address.
+    let response = match request_page(&domain_name, &path) {
+    	Ok(s) => {println!("oh hai"); s},
+    	Err(e) => {println!("oh shit"); panic!("Error requesting page: {:?}", e)}
+    };
 
     // Display the response.
     println!("response:\n{:?}", response);
+}
+
+// TODO return slice instead of whole string?
+// Get the path portion after the domain name from the url.
+fn get_path_from_url(url: &str) -> String {
+	String::from("/java/host/test.html")
+}
+
+// TODO return slice instead of whole string?
+fn get_domain_name(url: &str) -> String {
+	String::from("www.brainjar.com")
+}
+
+fn build_http_message(path: &str) -> String {
+    format!("GET {} HTTP/1.0\n\n", path)
+}
+
+fn request_page(domain_name: &str, path: &str) -> Result<String, &'static str> {
+	let http_message = build_http_message(path);
+    println!("[DEBUG] The http message is:\n{}", &http_message);
+
+    // TODO need to go over every DNS result, some of the results don't give valid IPs.
+    let mut sock_addr = net::lookup_host(domain_name).expect("Failed to perform dns lookup").nth(0).unwrap();
+    // We need to set port 80 manually because this is an HTTP message.
+    sock_addr.set_port(80);
+    println!("{:?}", sock_addr);
+
+	// Then we can open a TCP socket to that IP address.
+    let mut stream = TcpStream::connect(sock_addr).unwrap();
+    println!("[DEBUG] connected!");
+
+    // Write out the entire HTTP message byte-by-byte.
+    let _ = stream.write_all(http_message.as_bytes()).expect("Failed to write HTTP message to address");
+    println!("[DEBUG] done writing!");
+
+    // Read back the response from the stream.
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response).expect("Failed to read response from address");
+    println!("[DEBUG] done reading!");
+
+    Ok(response)
 }
 
 fn parse_args() -> String {
 	// Grab all the args from cmdline.
 	let args: Vec<String> = env::args().collect();
 
-	// TODO clean up this ugly mess!
+	// TODO clean up this ugly mess! Return Option or Result and do error handling outside in main.
 	return match args.len() {
 		// If no args, panic!
 		1 => {help(); panic!();},
