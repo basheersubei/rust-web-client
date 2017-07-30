@@ -25,14 +25,14 @@ fn main() {
     let mut stream = TcpStream::connect(address).unwrap();
 
     // Write out the entire HTTP message byte-by-byte.
-    try!(stream.write_all(&http_message.as_bytes()));
+    let _ = stream.write_all(&http_message.as_bytes());
 
     // Read back the response from the stream.
     let mut response = String::new();
-    let _ = stream.read_to_string(&mut thingie);
+    let _ = stream.read_to_string(&mut response);
 
     // Display the response.
-    println!("response:\n{:?}", thingie);
+    println!("response:\n{:?}", response);
 }
 
 fn parse_args() -> String {
