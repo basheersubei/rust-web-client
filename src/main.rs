@@ -1,6 +1,9 @@
+#![feature(lookup_host)]
 use std::io::prelude::*;
 use std::env;
 use std::net::TcpStream;
+
+use std::net;
 
 fn main() {
 
@@ -12,11 +15,18 @@ fn main() {
     // TODO Then, construct the HTTP message to send.
 //    let http_message: String = format!("GET {} HTTP/1.1\n\n", url);
 
-//    let address = "64.78.59.92:80";
-//    let http_message = "GET /java/host/test.html HTTP/1.0\n\n";
-
     let http_message = "GET / HTTP/1.1\n\n";
     println!("[DEBUG] The http message is:\n{}", http_message);
+
+    
+    // DEBUG ONLY: print out all IPs for every result we get from the DNS query.
+    for host in net::lookup_host(&url) {
+    	host.map(|sock_addr: std::net::SocketAddr| println!("ip: {}", sock_addr.ip())).count();
+    	// Same as doing this:
+    	// for sock_addr in host {
+    	// 	println!("ip: {}", sock_addr.ip());
+    	// }
+    }
 
     // Then, open a socket/whatever to the URL.
     	// TODO First, we need to do a DNS lookup on the given url to get the IP address.
